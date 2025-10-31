@@ -246,7 +246,7 @@ private:
         std::stringstream configIdStream;
 
         configIdStream.str(configString);
-        // Process each config ID in the string, delimited by the comma - "," and then space " "
+        // Обрабатываем каждый ID конфигурации в строке, разделенный запятой - "," и затем пробелом " "
         while (std::getline(configIdStream, delimitedValue, ','))
         {
             std::string pairOne, pairTwo;
