@@ -9,7 +9,7 @@
 ########################################
 #    ChallengeModes.Enable
 #        Description: Enable challenge modes.
-#            If set to 0, all challenges will be disabled, and the challenge mode selection object will not be present in starting areas.
+#            Если установлено в 0, все испытания будут отключены, и объект выбора режима испытаний не будет присутствовать в стартовых зонах.
 #        Default:     0 - Disabled
 #                     1 - Enabled
 #
