@@ -12,6 +12,8 @@
 #include "ItemTemplate.h"
 #include "GameObjectAI.h"
 #include "Pet.h"
+#include "World.h"
+#include "WorldSession.h"
 #include <map>
 
 

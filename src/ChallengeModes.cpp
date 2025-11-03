@@ -834,7 +834,6 @@ public:
     bool OnGossipSelect(Player* player, GameObject* /*go*/, uint32 /*sender*/, uint32 action) override
     {
         player->UpdatePlayerSetting("mod-challenge-modes", action, 1);
-        ChatHandler(player->GetSession()).PSendSysMessage("Испытание активировано.");
         
         // Получаем название испытания
         std::string challengeName;
@@ -870,10 +869,27 @@ public:
         }
         
         // Оповещаем всех игроков на сервере
-        std::string announcement = Acore::StringFormat("|cffFFFF00[Испытание]|r |cff00FF00%s|r начал испытание |cffFF0000%s|r!", player->GetName().c_str(), challengeName.c_str());
+        std::string announcement = "|cffFFFF00[Сервер]|r |cff00FF00" + player->GetName() + "|r начал испытание |cffFF0000" + challengeName + "|r!";
         
         // Отправляем сообщение в чат всем игрокам на сервере
         ChatHandler(nullptr).SendWorldText(announcement.c_str());
+        
+        // Отправляем уведомление на экран всем онлайн игрокам
+        SessionMap const& sessions = sWorld->GetAllSessions();
+        for (SessionMap::const_iterator itr = sessions.begin(); itr != sessions.end(); ++itr)
+        {
+            if (WorldSession* session = itr->second)
+            {
+                if (Player* onlinePlayer = session->GetPlayer())
+                {
+                    if (onlinePlayer->IsInWorld())
+                    {
+                        std::string screenNotification = player->GetName() + " начал испытание: " + challengeName;
+                        onlinePlayer->GetSession()->SendNotification("%s", screenNotification.c_str());
+                    }
+                }
+            }
+        }
         
         CloseGossipMenuFor(player);
         return true;
