@@ -388,7 +388,7 @@ void OnLevelChanged(Player* player, uint8 /*oldlevel*/)
     if (mapContainsKey(itemRewardMap, level))
     {
         uint32 itemEntry = itemRewardMap->at(level);
-        uint32 itemAmount = sChallengeModes->getItemRewardAmount(settingName); // Fetch item amount from config
+        uint32 itemAmount = sChallengeModes->getItemRewardAmount(settingName); // Получаем количество предметов из конфигурации
         player->SendItemRetrievalMail({ { itemEntry, itemAmount } });
     }
 
@@ -451,7 +451,7 @@ public:
         {
             return;
         }
-        // A better implementation is to not allow the resurrect but this will need a new hook added first
+        // Лучшая реализация - не разрешать воскрешение, но сначала нужно добавить новый хук
         player->UpdatePlayerSetting("mod-challenge-modes", HARDCORE_DEAD, 1);
         player->KillPlayer();
         player->GetSession()->KickPlayer("Персонаж в режиме Хардкор умер");
@@ -603,7 +603,7 @@ public:
         }
         if (victim)
         {
-            // Still award XP to pets - they won't be able to pass the player's level
+            // Все еще награждаем питомца опытом - они не смогут превзойти уровень игрока
             Pet* pet = player->GetPet();
             if (pet && xpSource == XPSOURCE_KILL)
                 pet->GivePetXP(player->GetGroup() ? amount / 2 : amount);
@@ -632,7 +632,7 @@ public:
         {
             return;
         }
-        // A better implementation is to not allow the resurrect but this will need a new hook added first
+        // Лучшая реализация - не разрешать воскрешение, но сначала нужно добавить новый хук
         player->KillPlayer();
     }
 
@@ -647,7 +647,7 @@ public:
         {
             return;
         }
-        player->SetFreeTalentPoints(0); // Remove all talent points
+        player->SetFreeTalentPoints(0); // Удаляем все очки талантов
         ChallengeMode::OnLevelChanged(player, oldlevel);
     }
 
@@ -657,7 +657,7 @@ public:
         {
             return;
         }
-        player->SetFreeTalentPoints(0); // Remove all talent points
+        player->SetFreeTalentPoints(0); // Удаляем все очки талантов
     }
 
     bool CanEquipItem(Player* player, uint8 /*slot*/, uint16& /*dest*/, Item* pItem, bool /*swap*/, bool /*not_loading*/)
@@ -675,7 +675,7 @@ public:
         {
             return true;
         }
-        // Are there any exceptions in WotLK? If so need to be added here
+        // Есть ли исключения в WotLK? Если да, их нужно добавить здесь
         return false;
     }
 
@@ -685,7 +685,7 @@ public:
         {
             return;
         }
-        // These professions are class skills so they are always acceptable
+        // Эти профессии являются классовыми навыками, поэтому всегда приемлемы
         switch (spellID)
         {
             case RUNEFORGING:
@@ -695,7 +695,7 @@ public:
             default:
                 break;
         }
-        // Do not allow learning any trade skills
+        // Не разрешаем изучение торговых навыков
         SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellID);
         if (!spellInfo)
             return;
@@ -719,7 +719,7 @@ public:
         {
             return true;
         }
-        // Do not allow using elixir, potion, or flask
+        // Не разрешаем использование эликсиров, зелий или фласок
         if (proto->Class == ITEM_CLASS_CONSUMABLE &&
                 (proto->SubClass == ITEM_SUBCLASS_POTION ||
                 proto->SubClass == ITEM_SUBCLASS_ELIXIR ||
@@ -727,7 +727,7 @@ public:
         {
             return false;
         }
-        // Do not allow food that gives food buffs
+        // Не разрешаем еду, которая дает баффы
         if (proto->Class == ITEM_CLASS_CONSUMABLE && proto->SubClass == ITEM_SUBCLASS_FOOD)
         {
             for (const auto & Spell : proto->Spells)
@@ -835,6 +835,51 @@ public:
     {
         player->UpdatePlayerSetting("mod-challenge-modes", action, 1);
         ChatHandler(player->GetSession()).PSendSysMessage("Испытание активировано.");
+        
+        // Получаем название испытания
+        std::string challengeName;
+        switch (action)
+        {
+            case SETTING_HARDCORE:
+                challengeName = "Хардкор";
+                break;
+            case SETTING_SEMI_HARDCORE:
+                challengeName = "Полу-Хардкор";
+                break;
+            case SETTING_SELF_CRAFTED:
+                challengeName = "Свой крафт";
+                break;
+            case SETTING_ITEM_QUALITY_LEVEL:
+                challengeName = "Низкое качество предметов";
+                break;
+            case SETTING_SLOW_XP_GAIN:
+                challengeName = "Медленный опыт";
+                break;
+            case SETTING_VERY_SLOW_XP_GAIN:
+                challengeName = "Очень медленный опыт";
+                break;
+            case SETTING_QUEST_XP_ONLY:
+                challengeName = "Опыт только за квесты";
+                break;
+            case SETTING_IRON_MAN:
+                challengeName = "Железный Человек";
+                break;
+            default:
+                challengeName = "Неизвестное испытание";
+                break;
+        }
+        
+        // Оповещаем всех игроков на сервере
+        std::string announcement = Acore::StringFormat("|cffFFFF00[Испытание]|r |cff00FF00%s|r начал испытание |cffFF0000%s|r!", player->GetName().c_str(), challengeName.c_str());
+        
+        // Отправляем сообщение в чат
+        sWorld->SendServerMessage(SERVER_MSG_STRING, announcement);
+        
+        // Отправляем глобальное сообщение на экран всем игрокам
+        WorldPacket data(SMSG_NOTIFICATION, announcement.size() + 1);
+        data << announcement;
+        sWorld->SendGlobalMessage(&data);
+        
         CloseGossipMenuFor(player);
         return true;
     }
@@ -845,7 +890,7 @@ public:
     }
 };
 
-// Add all scripts in one
+// Добавляем все скрипты в одном месте
 void AddSC_mod_challenge_modes()
 {
     new ChallengeModes_WorldScript();
