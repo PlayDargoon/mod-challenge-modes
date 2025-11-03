@@ -870,22 +870,10 @@ public:
         }
         
         // Оповещаем всех игроков на сервере
-        std::string announcement = Acore::StringFormat("|cffFFFF00[Испытание]|r |cff00FF00%s|r начал испытание |cffFF0000%s|r!", player->GetName().c_str(), challengeName.c_str());
+        std::string announcement = Acore::StringFormat("[Испытание] %s начал испытание %s!", player->GetName().c_str(), challengeName.c_str());
         
-        // Отправляем сообщение в чат всем игрокам онлайн
-        SessionMap const& sessions = sWorld->GetAllSessions();
-        for (SessionMap::const_iterator itr = sessions.begin(); itr != sessions.end(); ++itr)
-        {
-            if (Player* plr = itr->second->GetPlayer())
-            {
-                ChatHandler(plr->GetSession()).PSendSysMessage("%s", announcement.c_str());
-                
-                // Отправляем глобальное уведомление на экран
-                WorldPacket data(SMSG_NOTIFICATION, announcement.size() + 1);
-                data << announcement;
-                plr->GetSession()->SendPacket(&data);
-            }
-        }
+        // Отправляем сообщение в чат всем игрокам на сервере
+        sWorld->SendWorldText(LANG_SYSTEMMESSAGE, announcement.c_str());
         
         CloseGossipMenuFor(player);
         return true;
