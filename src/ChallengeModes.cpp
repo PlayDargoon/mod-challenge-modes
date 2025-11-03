@@ -880,7 +880,7 @@ public:
         {
             if (WorldSession* session = onlinePlayer->GetSession())
             {
-                session->SendAreaTriggerMessage("%s", screenNotification.c_str());
+                session->SendAreaTriggerMessage(screenNotification);
             }
         });
         
