@@ -475,12 +475,18 @@ public:
             ApplyChallengeAura(player, SETTING_HARDCORE);
         }
         
-        if (!sChallengeModes->challengeEnabledForPlayer(SETTING_HARDCORE, player) || !sChallengeModes->challengeEnabledForPlayer(HARDCORE_DEAD, player))
+        // Если персонаж мертв в режиме хардкор — показываем сообщение, но НЕ кикаем
+        if (sChallengeModes->challengeEnabledForPlayer(SETTING_HARDCORE, player) && 
+            sChallengeModes->challengeEnabledForPlayer(HARDCORE_DEAD, player))
         {
-            return;
+            ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Ваш хардкор-персонаж погиб. Воскрешение невозможно.|r");
+            ChatHandler(player->GetSession()).PSendSysMessage("|cffFFFF00Создайте нового персонажа для продолжения игры.|r");
+            // Убиваем персонажа, если он каким-то образом оказался живым
+            if (player->IsAlive())
+            {
+                player->KillPlayer();
+            }
         }
-        player->KillPlayer();
-        player->GetSession()->KickPlayer("Hardcore character died");
     }
 
     void OnPlayerReleasedGhost(Player* player)
@@ -489,8 +495,9 @@ public:
         {
             return;
         }
+        // Помечаем персонажа как мертвого, но НЕ кикаем
         player->UpdatePlayerSetting("mod-challenge-modes", HARDCORE_DEAD, 1);
-        player->GetSession()->KickPlayer("Hardcore character died");
+        ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Ваш хардкор-персонаж погиб навсегда. Воскрешение невозможно.|r");
     }
 
     void OnPVPKill(Player* /*killer*/, Player* killed)
@@ -517,10 +524,11 @@ public:
         {
             return;
         }
-        // Лучшая реализация - не разрешать воскрешение, но сначала нужно добавить новый хук
+        // Полностью блокируем воскрешение для хардкор-персонажей
+        ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Воскрешение запрещено для хардкор-персонажей!|r");
         player->UpdatePlayerSetting("mod-challenge-modes", HARDCORE_DEAD, 1);
+        // Убиваем снова, чтобы отменить любую попытку воскрешения
         player->KillPlayer();
-        player->GetSession()->KickPlayer("Персонаж в режиме Хардкор умер");
     }
 
     void OnGiveXP(Player* player, uint32& amount, Unit* victim, uint8 xpSource)
