@@ -4,6 +4,7 @@
 
 #include "ChallengeModes.h"
 #include "WorldSessionMgr.h"
+#include "WorldSession.h"
 
 ChallengeModes* ChallengeModes::instance()
 {
@@ -869,15 +870,19 @@ public:
                 break;
         }
         
-        // Оповещаем всех игроков на сервере
+        // Оповещаем всех игроков на сервере (чат)
         std::string announcement = "|cffFFFF00[Сервер]|r |cff00FF00" + player->GetName() + "|r начал испытание |cffFF0000" + challengeName + "|r!";
-        
-        // Отправляем сообщение в чат всем игрокам на сервере
         ChatHandler(nullptr).SendWorldText(announcement.c_str());
-        
-        // Отправляем уведомление на экран всем онлайн игрокам (серверное сообщение)
-        std::string screenNotification = "[Сервер] " + player->GetName() + " начал испытание: " + challengeName + "!";
-        sWorldSessionMgr->SendServerMessage(SERVER_MSG_STRING, screenNotification);
+
+        // Показать на экране у всех игроков (жёлтый центр-экранный баннер)
+        const std::string screenNotification = player->GetName() + std::string(" начал испытание: ") + challengeName + "!";
+        sWorldSessionMgr->DoForAllOnlinePlayers([&screenNotification](Player* onlinePlayer)
+        {
+            if (WorldSession* session = onlinePlayer->GetSession())
+            {
+                session->SendAreaTriggerMessage("%s", screenNotification.c_str());
+            }
+        });
         
         CloseGossipMenuFor(player);
         return true;
