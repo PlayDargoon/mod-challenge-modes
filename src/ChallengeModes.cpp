@@ -332,6 +332,62 @@ public:
         return (mapToCheck->find(key) != mapToCheck->end());
     }
 
+    // Получить Spell ID ауры для конкретного испытания из конфигурации.
+    // По умолчанию (0) аура не накладывается, чтобы избежать побочных эффектов.
+    static uint32 GetChallengeAuraSpellId(ChallengeModeSettings setting)
+    {
+        switch (setting)
+        {
+            case SETTING_HARDCORE:
+                return sConfigMgr->GetOption<uint32>("ChallengeModes.Aura.Hardcore", 0u);
+            case SETTING_SEMI_HARDCORE:
+                return sConfigMgr->GetOption<uint32>("ChallengeModes.Aura.SemiHardcore", 0u);
+            case SETTING_SELF_CRAFTED:
+                return sConfigMgr->GetOption<uint32>("ChallengeModes.Aura.SelfCrafted", 0u);
+            case SETTING_ITEM_QUALITY_LEVEL:
+                return sConfigMgr->GetOption<uint32>("ChallengeModes.Aura.ItemQualityLevel", 0u);
+            case SETTING_SLOW_XP_GAIN:
+                return sConfigMgr->GetOption<uint32>("ChallengeModes.Aura.SlowXpGain", 0u);
+            case SETTING_VERY_SLOW_XP_GAIN:
+                return sConfigMgr->GetOption<uint32>("ChallengeModes.Aura.VerySlowXpGain", 0u);
+            case SETTING_QUEST_XP_ONLY:
+                return sConfigMgr->GetOption<uint32>("ChallengeModes.Aura.QuestXpOnly", 0u);
+            case SETTING_IRON_MAN:
+                return sConfigMgr->GetOption<uint32>("ChallengeModes.Aura.IronMan", 0u);
+            default:
+                return 0u;
+        }
+    }
+
+    // Применить ауру испытания к игроку
+    static void ApplyChallengeAura(Player* player, ChallengeModeSettings setting)
+    {
+        uint32 spellId = GetChallengeAuraSpellId(setting);
+        if (spellId && !player->HasAura(spellId))
+        {
+            // Применяем ауру с длительностью -1 (бесконечная)
+            if (SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId))
+            {
+                player->AddAura(spellId, player);
+                if (Aura* aura = player->GetAura(spellId))
+                {
+                    aura->SetDuration(-1);
+                    aura->SetMaxDuration(-1);
+                }
+            }
+        }
+    }
+
+    // Убрать ауру испытания
+    static void RemoveChallengeAura(Player* player, ChallengeModeSettings setting)
+    {
+        uint32 spellId = GetChallengeAuraSpellId(setting);
+        if (spellId && player->HasAura(spellId))
+        {
+            player->RemoveAura(spellId);
+        }
+    }
+
     void OnGiveXP(Player* player, uint32& amount, Unit* /*victim*/, uint8 /*xpSource*/)
     {
         if (!sChallengeModes->challengeEnabledForPlayer(settingName, player))
@@ -397,6 +453,8 @@ void OnLevelChanged(Player* player, uint8 /*oldlevel*/)
     if (sChallengeModes->getDisableLevel(settingName) && sChallengeModes->getDisableLevel(settingName) <= level)
     {
         player->UpdatePlayerSetting("mod-challenge-modes", settingName, 0);
+        // Удаляем ауру при автоматическом отключении испытания
+        RemoveChallengeAura(player, settingName);
     }
 }
 
@@ -411,6 +469,12 @@ public:
 
     void OnLogin(Player* player)
     {
+        // Применяем ауру, если испытание активно
+        if (sChallengeModes->challengeEnabledForPlayer(SETTING_HARDCORE, player))
+        {
+            ApplyChallengeAura(player, SETTING_HARDCORE);
+        }
+        
         if (!sChallengeModes->challengeEnabledForPlayer(SETTING_HARDCORE, player) || !sChallengeModes->challengeEnabledForPlayer(HARDCORE_DEAD, player))
         {
             return;
@@ -475,6 +539,14 @@ class ChallengeMode_SemiHardcore : public ChallengeMode
 public:
     ChallengeMode_SemiHardcore() : ChallengeMode("ChallengeMode_SemiHardcore", SETTING_SEMI_HARDCORE) {}
 
+    void OnLogin(Player* player)
+    {
+        if (sChallengeModes->challengeEnabledForPlayer(SETTING_SEMI_HARDCORE, player))
+        {
+            ApplyChallengeAura(player, SETTING_SEMI_HARDCORE);
+        }
+    }
+
     void OnPlayerKilledByCreature(Creature* /*killer*/, Player* player)
     {
         if (!sChallengeModes->challengeEnabledForPlayer(SETTING_SEMI_HARDCORE, player))
@@ -511,6 +583,14 @@ class ChallengeMode_SelfCrafted : public ChallengeMode
 public:
     ChallengeMode_SelfCrafted() : ChallengeMode("ChallengeMode_SelfCrafted", SETTING_SELF_CRAFTED) {}
 
+    void OnLogin(Player* player)
+    {
+        if (sChallengeModes->challengeEnabledForPlayer(SETTING_SELF_CRAFTED, player))
+        {
+            ApplyChallengeAura(player, SETTING_SELF_CRAFTED);
+        }
+    }
+
     bool CanEquipItem(Player* player, uint8 /*slot*/, uint16& /*dest*/, Item* pItem, bool /*swap*/, bool /*not_loading*/)
     {
         if (!sChallengeModes->challengeEnabledForPlayer(SETTING_SELF_CRAFTED, player))
@@ -540,6 +620,14 @@ class ChallengeMode_ItemQualityLevel : public ChallengeMode
 public:
     ChallengeMode_ItemQualityLevel() : ChallengeMode("ChallengeMode_ItemQualityLevel", SETTING_ITEM_QUALITY_LEVEL) {}
 
+    void OnLogin(Player* player)
+    {
+        if (sChallengeModes->challengeEnabledForPlayer(SETTING_ITEM_QUALITY_LEVEL, player))
+        {
+            ApplyChallengeAura(player, SETTING_ITEM_QUALITY_LEVEL);
+        }
+    }
+
     bool CanEquipItem(Player* player, uint8 /*slot*/, uint16& /*dest*/, Item* pItem, bool /*swap*/, bool /*not_loading*/)
     {
         if (!sChallengeModes->challengeEnabledForPlayer(SETTING_ITEM_QUALITY_LEVEL, player))
@@ -565,6 +653,14 @@ class ChallengeMode_SlowXpGain : public ChallengeMode
 public:
     ChallengeMode_SlowXpGain() : ChallengeMode("ChallengeMode_SlowXpGain", SETTING_SLOW_XP_GAIN) {}
 
+    void OnLogin(Player* player)
+    {
+        if (sChallengeModes->challengeEnabledForPlayer(SETTING_SLOW_XP_GAIN, player))
+        {
+            ApplyChallengeAura(player, SETTING_SLOW_XP_GAIN);
+        }
+    }
+
     void OnGiveXP(Player* player, uint32& amount, Unit* victim, uint8 xpSource)
     {
         ChallengeMode::OnGiveXP(player, amount, victim, xpSource);
@@ -581,6 +677,14 @@ class ChallengeMode_VerySlowXpGain : public ChallengeMode
 public:
     ChallengeMode_VerySlowXpGain() : ChallengeMode("ChallengeMode_VerySlowXpGain", SETTING_VERY_SLOW_XP_GAIN) {}
 
+    void OnLogin(Player* player)
+    {
+        if (sChallengeModes->challengeEnabledForPlayer(SETTING_VERY_SLOW_XP_GAIN, player))
+        {
+            ApplyChallengeAura(player, SETTING_VERY_SLOW_XP_GAIN);
+        }
+    }
+
     void OnGiveXP(Player* player, uint32& amount, Unit* victim, uint8 xpSource)
     {
         ChallengeMode::OnGiveXP(player, amount, victim, xpSource);
@@ -596,6 +700,14 @@ class ChallengeMode_QuestXpOnly : public ChallengeMode
 {
 public:
     ChallengeMode_QuestXpOnly() : ChallengeMode("ChallengeMode_QuestXpOnly", SETTING_QUEST_XP_ONLY) {}
+
+    void OnLogin(Player* player)
+    {
+        if (sChallengeModes->challengeEnabledForPlayer(SETTING_QUEST_XP_ONLY, player))
+        {
+            ApplyChallengeAura(player, SETTING_QUEST_XP_ONLY);
+        }
+    }
 
     void OnGiveXP(Player* player, uint32& amount, Unit* victim, uint8 xpSource)
     {
@@ -627,6 +739,14 @@ class ChallengeMode_IronMan : public ChallengeMode
 {
 public:
     ChallengeMode_IronMan() : ChallengeMode("ChallengeMode_IronMan", SETTING_IRON_MAN) {}
+
+    void OnLogin(Player* player)
+    {
+        if (sChallengeModes->challengeEnabledForPlayer(SETTING_IRON_MAN, player))
+        {
+            ApplyChallengeAura(player, SETTING_IRON_MAN);
+        }
+    }
 
     void OnPlayerResurrect(Player* player, float /*restore_percent*/, bool /*applySickness*/)
     {
@@ -835,6 +955,17 @@ public:
 
     bool OnGossipSelect(Player* player, GameObject* /*go*/, uint32 /*sender*/, uint32 action) override
     {
+        // Жёсткая проверка eligibility: испытание можно брать только новым персонажам
+        // - обычные классы: ровно 1 уровень
+        // - рыцарь смерти: ровно 55 уровень
+        bool eligible = (player->getClass() == CLASS_DEATH_KNIGHT) ? (player->GetLevel() == 55) : (player->GetLevel() == 1);
+        if (!eligible)
+        {
+            ChatHandler(player->GetSession()).SendSysMessage("|cffff0000Испытание можно активировать только новым персонажам: на 1 уровне (или на 55 уровне для рыцаря смерти).|r");
+            CloseGossipMenuFor(player);
+            return true;
+        }
+
         player->UpdatePlayerSetting("mod-challenge-modes", action, 1);
         
         // Получаем название испытания
@@ -869,6 +1000,9 @@ public:
                 challengeName = "Неизвестное испытание";
                 break;
         }
+        
+        // Применяем ауру испытания к игроку (если настроена безопасная аура в конфиге)
+    ChallengeMode::ApplyChallengeAura(player, static_cast<ChallengeModeSettings>(action));
         
         // Оповещаем всех игроков на сервере (чат)
         std::string announcement = "|cffFFFF00[Сервер]|r |cff00FF00" + player->GetName() + "|r начал испытание |cffFF0000" + challengeName + "|r!";

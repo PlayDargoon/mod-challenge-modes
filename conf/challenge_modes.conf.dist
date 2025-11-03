@@ -130,3 +130,23 @@ IronMan.ItemRewardAmount = 1
 IronMan.DisableLevel = 0
 IronMan.XPMultiplier = 1
 IronMan.AchievementReward = ""
+#####################################################################
+#
+# AURA INDICATORS FOR CHALLENGE MODES
+# These options allow you to display a harmless aura (buff icon) on players
+# who have a specific challenge active. Use existing spell IDs that are known
+# to be safe (no stat changes, no restrictions). If set to 0, no aura is applied.
+# NOTE: Client spell name/icon cannot be changed server-side; choose spells you like.
+#
+# Example (suggestion): test a few harmless dummy/visual auras on a dev server
+# before enabling in production.
+#
+ChallengeModes.Aura.Hardcore = 0
+ChallengeModes.Aura.SemiHardcore = 0
+ChallengeModes.Aura.SelfCrafted = 0
+ChallengeModes.Aura.ItemQualityLevel = 0
+ChallengeModes.Aura.SlowXpGain = 0
+ChallengeModes.Aura.VerySlowXpGain = 0
+ChallengeModes.Aura.QuestXpOnly = 0
+ChallengeModes.Aura.IronMan = 0
+
