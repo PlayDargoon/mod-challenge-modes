@@ -495,7 +495,7 @@ public:
         {
             return;
         }
-        // Помечаем персонажа как мертвого, но НЕ кикаем
+        // Помечаем персонажа как мертвого (этот хук сработает, если игрок вручную отпустил дух)
         player->UpdatePlayerSetting("mod-challenge-modes", HARDCORE_DEAD, 1);
         ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Ваш хардкор-персонаж погиб навсегда. Воскрешение невозможно.|r");
     }
@@ -507,6 +507,24 @@ public:
             return;
         }
         killed->UpdatePlayerSetting("mod-challenge-modes", HARDCORE_DEAD, 1);
+        // Автоматически отпускаем дух
+        killed->BuildPlayerRepop();
+        killed->RepopAtGraveyard();
+        ChatHandler(killed->GetSession()).PSendSysMessage("|cffFF0000Ваш хардкор-персонаж погиб навсегда. Воскрешение невозможно.|r");
+        
+        // Глобальное оповещение о смерти хардкор-персонажа (чат)
+        std::string deathAnnouncement = "|cffFFFF00[Сервер]|r |cffFF0000" + killed->GetName() + "|r погиб в режиме |cffFF0000Хардкор|r!";
+        ChatHandler(nullptr).SendWorldText(deathAnnouncement.c_str());
+        
+        // Глобальное оповещение на экране
+        const std::string screenNotification = killed->GetName() + std::string(" погиб в режиме Хардкор!");
+        sWorldSessionMgr->DoForAllOnlinePlayers([&screenNotification](Player* onlinePlayer)
+        {
+            if (WorldSession* session = onlinePlayer->GetSession())
+            {
+                session->SendAreaTriggerMessage(screenNotification);
+            }
+        });
     }
 
     void OnPlayerKilledByCreature(Creature* /*killer*/, Player* killed)
@@ -516,6 +534,36 @@ public:
             return;
         }
         killed->UpdatePlayerSetting("mod-challenge-modes", HARDCORE_DEAD, 1);
+        // Автоматически отпускаем дух
+        killed->BuildPlayerRepop();
+        killed->RepopAtGraveyard();
+        ChatHandler(killed->GetSession()).PSendSysMessage("|cffFF0000Ваш хардкор-персонаж погиб навсегда. Воскрешение невозможно.|r");
+        
+        // Глобальное оповещение о смерти хардкор-персонажа (чат)
+        std::string deathAnnouncement = "|cffFFFF00[Сервер]|r |cffFF0000" + killed->GetName() + "|r погиб в режиме |cffFF0000Хардкор|r!";
+        ChatHandler(nullptr).SendWorldText(deathAnnouncement.c_str());
+        
+        // Глобальное оповещение на экране
+        const std::string screenNotification = killed->GetName() + std::string(" погиб в режиме Хардкор!");
+        sWorldSessionMgr->DoForAllOnlinePlayers([&screenNotification](Player* onlinePlayer)
+        {
+            if (WorldSession* session = onlinePlayer->GetSession())
+            {
+                session->SendAreaTriggerMessage(screenNotification);
+            }
+        });
+    }
+
+    bool CanRepopAtGraveyard(Player* player)
+    {
+        // Блокируем воскрешение через Целителя Душ для мертвых хардкор-персонажей
+        if (sChallengeModes->challengeEnabledForPlayer(SETTING_HARDCORE, player) &&
+            sChallengeModes->challengeEnabledForPlayer(HARDCORE_DEAD, player))
+        {
+            ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Воскрешение запрещено для мертвых хардкор-персонажей!|r");
+            return false; // Запрещаем воскрешение
+        }
+        return true;
     }
 
     void OnPlayerResurrect(Player* player, float /*restore_percent*/, bool /*applySickness*/)
@@ -524,7 +572,7 @@ public:
         {
             return;
         }
-        // Полностью блокируем воскрешение для хардкор-персонажей
+        // Полностью блокируем воскрешение для хардкор-персонажей (любое: заклинания, предметы и т.д.)
         ChatHandler(player->GetSession()).PSendSysMessage("|cffFF0000Воскрешение запрещено для хардкор-персонажей!|r");
         player->UpdatePlayerSetting("mod-challenge-modes", HARDCORE_DEAD, 1);
         // Убиваем снова, чтобы отменить любую попытку воскрешения
